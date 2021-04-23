@@ -68,3 +68,63 @@ func (userRepository UserRepository) Find(nameOrNick string) ([]models.User, err
 	}
 	return users, nil
 }
+
+//FindById return one user from DB
+func (userRepository UserRepository) FindById(userId uint64) (models.User, error) {
+	lines, err := userRepository.db.Query(
+		"select id, name, nick, email, criatedAt From users where id = ?",
+		userId,
+	)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	defer lines.Close()
+
+	var user models.User
+
+	if lines.Next() {
+		if err = lines.Scan(
+			&user.ID,
+			&user.Name,
+			&user.Nick,
+			&user.Email,
+			&user.CriatedAt,
+		); err != nil {
+			return models.User{}, err
+		}
+	}
+	return user, nil
+}
+
+//Update change user infos in DB
+func (userRepository UserRepository) Update(userId uint64, user models.User) error {
+	statement, err := userRepository.db.Prepare(
+		"update users set name = ?, nick = ?, email = ? where id = ?",
+	)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	if _, err = statement.Exec(user.Name, user.Nick, user.Email, userId); err != nil {
+		return err
+	}
+	return nil
+}
+
+//Delete user infos from DB
+func (userRepository UserRepository) Delete(userId uint64) error {
+	statement, err := userRepository.db.Prepare(
+		"delete from users where id = ?",
+	)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	if _, err = statement.Exec(userId); err != nil {
+		return err
+	}
+	return nil
+}
